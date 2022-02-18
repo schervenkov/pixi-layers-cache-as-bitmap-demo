@@ -28,8 +28,8 @@ const circlesCont = new Container();
 
 app.stage.addChild(circlesCont);
 
-const blueCircle = createCircle(0x0000ff, new Point(100, 100), undefined, "blue circle");
-const redCircle = createCircle(0xff0000, new Point(150, 100), undefined, "red circle");
+const blueCircle = createCircle(0x0000ff, new Point(100, 100), undefined /* blueGroup */, "blue circle");
+const redCircle = createCircle(0xff0000, new Point(150, 100), undefined /* redGroup */, "red circle");
 
 circlesCont.parentGroup = contGroup;
 
@@ -59,6 +59,20 @@ function createCircle(color: number, position: Point, group?: Group, name?: stri
 let dragging = false;
 let dragPoint: IPointData | null = null;
 let currObj: DisplayObject | null = null;
+
+function toggleCirclesGroups() {
+    if (redCircle.parentGroup) {
+        redCircle.parentGroup = undefined;
+    } else {
+        redCircle.parentGroup = redGroup;
+    }
+
+    if (blueCircle.parentGroup) {
+        blueCircle.parentGroup = undefined;
+    } else {
+        blueCircle.parentGroup = blueGroup;
+    }
+}
 
 function onDragStart(event: InteractionEvent) {
     if (!dragging && event.target && !currObj) {
@@ -100,8 +114,17 @@ btn.onclick = () => {
     circlesCont.cacheAsBitmap = !circlesCont.cacheAsBitmap;
 };
 
+const btn2 = document.createElement("input");
+btn2.type = "button";
+btn2.value = "Add / Remove circles to groups";
+btn2.onclick = () => {
+    toggleCirclesGroups();
+};
+
 const cont = document.body;
 
 if (cont) {
+    cont.appendChild(document.createElement("br"));
     cont.appendChild(btn);
+    cont.appendChild(btn2);
 }
