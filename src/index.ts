@@ -1,83 +1,107 @@
-import { Application, Loader, Texture, AnimatedSprite } from "pixi.js";
-import { getSpine } from "./spine-example";
-import { getLayersExample } from "./layers-example";
-import "./style.css";
-
-declare const VERSION: string;
-
-const gameWidth = 800;
-const gameHeight = 600;
-
-console.log(`Welcome from pixi-typescript-boilerplate ${VERSION}`);
+import { Group, Layer, Stage } from "@pixi/layers";
+import { Application, Container, DisplayObject, Graphics, InteractionEvent, IPointData, Point } from "pixi.js";
 
 const app = new Application({
-    backgroundColor: 0xd3d3d3,
-    width: gameWidth,
-    height: gameHeight,
+    width: 640,
+    height: 480,
+    autoStart: true,
 });
 
-window.onload = async (): Promise<void> => {
-    await loadGameAssets();
+app.stage = new Stage();
+app.stage.sortableChildren = true;
 
-    document.body.appendChild(app.view);
+document.body.appendChild(app.view);
 
-    getLayersExample(app);
+const contGroup = new Group(0, true);
+const redGroup = new Group(1, true);
+const blueGroup = new Group(2, true);
 
-    resizeCanvas();
+const contLayer = new Layer(contGroup);
+const redLayer = new Layer(redGroup);
+const blueLayer = new Layer(blueGroup);
 
-    const birdFromSprite = getBird();
-    birdFromSprite.anchor.set(0.5, 0.5);
-    birdFromSprite.position.set(gameWidth / 2, 530);
+app.stage.addChild(contLayer);
+app.stage.addChild(redLayer);
+app.stage.addChild(blueLayer);
 
-    const spineExample = getSpine();
-    spineExample.position.y = 580;
+const circlesCont = new Container();
 
-    app.stage.addChild(birdFromSprite);
-    app.stage.addChild(spineExample);
-    app.stage.interactive = true;
+app.stage.addChild(circlesCont);
+
+const blueCircle = createCircle(0x0000ff, new Point(100, 100), undefined, "blue circle");
+const redCircle = createCircle(0xff0000, new Point(150, 100), undefined, "red circle");
+
+circlesCont.parentGroup = contGroup;
+
+function createCircle(color: number, position: Point, group?: Group, name?: string): DisplayObject {
+    const circle = new Graphics().beginFill(color).drawCircle(0, 0, 100).endFill();
+    if (name) {
+        circle.name = name;
+    }
+    circle.position.copyFrom(position);
+    circlesCont.addChild(circle);
+    if (group) {
+        circle.parentGroup = group;
+    }
+    circle.interactive = true;
+    circle
+        .on("mousedown", onDragStart)
+        .on("touchstart", onDragStart)
+        .on("mouseup", onDragEnd)
+        .on("mouseupoutside", onDragEnd)
+        .on("touchend", onDragEnd)
+        .on("touchendoutside", onDragEnd)
+        .on("mousemove", onDragMove)
+        .on("touchmove", onDragMove);
+    return circle;
+}
+
+let dragging = false;
+let dragPoint: IPointData | null = null;
+let currObj: DisplayObject | null = null;
+
+function onDragStart(event: InteractionEvent) {
+    if (!dragging && event.target && !currObj) {
+        const data = event.data;
+        currObj = event.target;
+        currObj.scale.x *= 1.1;
+        currObj.scale.y *= 1.1;
+        dragPoint = data.getLocalPosition(currObj.parent);
+        dragPoint.x -= currObj.x;
+        dragPoint.y -= currObj.y;
+        dragging = true;
+    }
+}
+
+function onDragMove(event: InteractionEvent) {
+    if (dragging && event.target && currObj) {
+        const data = event.data;
+        const newPosition = data.getLocalPosition(currObj.parent);
+        const x = dragPoint ? dragPoint.x : 0;
+        const y = dragPoint ? dragPoint.y : 0;
+        currObj.x = newPosition.x - x;
+        currObj.y = newPosition.y - y;
+    }
+}
+
+function onDragEnd(event: InteractionEvent) {
+    if (dragging && event.target && currObj) {
+        dragging = false;
+        currObj.scale.x /= 1.1;
+        currObj.scale.y /= 1.1;
+        currObj = null;
+    }
+}
+
+const btn = document.createElement("input");
+btn.type = "button";
+btn.value = "Toggle cache as bitmap";
+btn.onclick = () => {
+    circlesCont.cacheAsBitmap = !circlesCont.cacheAsBitmap;
 };
 
-async function loadGameAssets(): Promise<void> {
-    return new Promise((res, rej) => {
-        const loader = Loader.shared;
-        loader.add("rabbit", "./assets/simpleSpriteSheet.json");
-        loader.add("pixie", "./assets/spine-assets/pixie.json");
+const cont = document.body;
 
-        loader.onComplete.once(() => {
-            res();
-        });
-
-        loader.onError.once(() => {
-            rej();
-        });
-
-        loader.load();
-    });
-}
-
-function resizeCanvas(): void {
-    const resize = () => {
-        app.renderer.resize(window.innerWidth, window.innerHeight);
-        app.stage.scale.x = window.innerWidth / gameWidth;
-        app.stage.scale.y = window.innerHeight / gameHeight;
-    };
-
-    resize();
-
-    window.addEventListener("resize", resize);
-}
-
-function getBird(): AnimatedSprite {
-    const bird = new AnimatedSprite([
-        Texture.from("birdUp.png"),
-        Texture.from("birdMiddle.png"),
-        Texture.from("birdDown.png"),
-    ]);
-
-    bird.loop = true;
-    bird.animationSpeed = 0.1;
-    bird.play();
-    bird.scale.set(3);
-
-    return bird;
+if (cont) {
+    cont.appendChild(btn);
 }
